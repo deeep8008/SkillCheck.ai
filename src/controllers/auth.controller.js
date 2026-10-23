@@ -107,5 +107,20 @@ const logoutUser = async (req, res) => {
         })
     }
 }
+const getUser = async (req, res) => {
+    try {
+        const user = await userModel.findById(req.user.id);
+        return res.status(200).json({
+            message: "User found successfully",
+            user
+        })
+    }
+    catch (err) {
+        console.log(err);
+        return res.status(500).json({
+            message: "Internal server error"
+        })
+    }
+}
 
-module.exports = { registerUser, loginUser,logoutUser };
+module.exports = { registerUser, loginUser, logoutUser, getUser };
