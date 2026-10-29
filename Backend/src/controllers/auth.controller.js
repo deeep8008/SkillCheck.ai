@@ -46,6 +46,11 @@ const registerUser = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({
+                message: "Username or email already exists"
+            });
+        }
         console.log(error);
         return res.status(500).json({
             message: "Internal server error"
@@ -55,13 +60,16 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
+        const { identifier, username, email, password } = req.body;
+        const account = identifier ?? username ?? email;
+        if (typeof account !== "string" || !account.trim() || typeof password !== "string" || !password) {
             return res.status(400).json({
                 message: "All fields are required"
             });
         }
-        const user = await userModel.findOne({ email });
+        const user = await userModel.findOne({
+            $or: [{ username: account.trim() }, { email: account.trim() }]
+        }).select("+password");
         if (!user) {
             return res.status(404).json({
                 message: "User not found"

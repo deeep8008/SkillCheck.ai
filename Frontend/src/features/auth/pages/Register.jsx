@@ -1,6 +1,31 @@
+import { useState } from "react";
+import { register } from "../services/auth.api";
 import { Link } from "react-router";
 
 const Register = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (isSubmitting) return;
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form));
+    setIsSubmitting(true);
+    setError("");
+    setSuccess("");
+    try {
+      const data = await register(values);
+      setSuccess(data.message);
+      form.reset();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to connect. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-950 p-6 font-['Space_Grotesk',sans-serif] selection:bg-red-500 selection:text-white">
       {/* Subtle Futuristic Grid Background */}
@@ -11,7 +36,7 @@ const Register = () => {
 
       <form
         className="relative z-10 w-full max-w-md border border-neutral-800/90 bg-neutral-900/75 p-6 shadow-[0_0_50px_-12px_rgba(220,38,38,0.2)] backdrop-blur-xl sm:p-10"
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={handleSubmit}
       >
         {/* Top Glowing Accent Bar */}
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent shadow-[0_2px_12px_rgba(220,38,38,0.8)]" />
@@ -99,13 +124,18 @@ const Register = () => {
           </span>
         </label>
 
+        {error && <p role="alert" className="mb-4 text-sm text-red-400">{error}</p>}
+        {success && <p role="status" className="mb-4 text-sm text-white">{success}</p>}
+
         {/* Submit Button */}
         <button
           type="submit"
-          className="group relative w-full cursor-pointer overflow-hidden bg-red-600 py-3.5 font-['Orbitron',sans-serif] text-sm font-bold tracking-widest text-white uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:bg-red-500 hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 active:scale-[0.99]"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+          className="disabled:cursor-wait disabled:opacity-60 group relative w-full cursor-pointer overflow-hidden bg-red-600 py-3.5 font-['Orbitron',sans-serif] text-sm font-bold tracking-widest text-white uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:bg-red-500 hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 active:scale-[0.99]"
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
-            Create account
+            {isSubmitting ? "Creating account..." : "Create account"}
             <span className="transition-transform duration-300 group-hover:translate-x-1.5">
               &rarr;
             </span>

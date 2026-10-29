@@ -1,6 +1,31 @@
+import { useState } from "react";
+import { login } from "../services/auth.api";
 import { Link } from "react-router";
 
 const Login = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (isSubmitting) return;
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form));
+    setIsSubmitting(true);
+    setError("");
+    setSuccess("");
+    try {
+      const data = await login(values);
+      setSuccess(data.message);
+      form.reset();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to connect. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-950 p-6 font-['Space_Grotesk',sans-serif] selection:bg-red-500 selection:text-white">
       {/* Subtle Futuristic Grid Background */}
@@ -11,7 +36,7 @@ const Login = () => {
 
       <form
         className="relative z-10 w-full max-w-md border border-neutral-800/90 bg-neutral-900/75 p-6 shadow-[0_0_50px_-12px_rgba(220,38,38,0.2)] backdrop-blur-xl sm:p-10"
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={handleSubmit}
       >
         {/* Top Glowing Accent Bar */}
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent shadow-[0_2px_12px_rgba(220,38,38,0.8)]" />
@@ -43,17 +68,17 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Email Input */}
+        {/* Username or Email Input */}
         <label className="group mb-6 block space-y-2 text-xs font-semibold tracking-widest text-neutral-400 uppercase">
           <span className="transition-colors group-focus-within:text-red-400">
-            Email Address
+            Username or Email
           </span>
           <span className="relative block">
             <input
-              type="email"
-              name="email"
-              autoComplete="email"
-              placeholder="operator@skillcheck.ai"
+              type="text"
+              name="identifier"
+              autoComplete="username"
+              placeholder="Username or email address"
               required
               className="w-full border border-neutral-800 bg-neutral-950/90 px-4 py-3 text-sm font-normal tracking-normal text-white placeholder:text-neutral-600 transition-all duration-200 focus:border-red-500 focus:bg-neutral-950 focus:shadow-[0_0_15px_rgba(239,68,68,0.15)] focus:outline-none"
             />
@@ -81,13 +106,18 @@ const Login = () => {
           </span>
         </label>
 
+        {error && <p role="alert" className="mb-4 text-sm text-red-400">{error}</p>}
+        {success && <p role="status" className="mb-4 text-sm text-white">{success}</p>}
+
         {/* Submit Button */}
         <button
           type="submit"
-          className="group relative w-full cursor-pointer overflow-hidden bg-red-600 py-3.5 font-['Orbitron',sans-serif] text-sm font-bold tracking-widest text-white uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:bg-red-500 hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 active:scale-[0.99]"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+          className="disabled:cursor-wait disabled:opacity-60 group relative w-full cursor-pointer overflow-hidden bg-red-600 py-3.5 font-['Orbitron',sans-serif] text-sm font-bold tracking-widest text-white uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:bg-red-500 hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 active:scale-[0.99]"
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
-            Authenticate
+            {isSubmitting ? "Signing in..." : "Authenticate"}
             <span className="transition-transform duration-300 group-hover:translate-x-1.5">
               &rarr;
             </span>
