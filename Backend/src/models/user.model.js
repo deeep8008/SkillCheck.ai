@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
-        unique: true,
         required: true
     },
     email: {
@@ -22,5 +21,10 @@ const userSchema = new mongoose.Schema({
             return result;
         }
     }
+});
+// Preserve legacy records without a username while enforcing uniqueness for valid ones.
+userSchema.index({ username: 1 }, {
+    unique: true,
+    partialFilterExpression: { username: { $type: "string" } }
 });
 module.exports = mongoose.model("User", userSchema);

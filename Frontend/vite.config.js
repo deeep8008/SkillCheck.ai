@@ -8,6 +8,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/auth': 'http://localhost:3000',
+      '/resumes': 'http://localhost:3000',
+      '/reports': 'http://localhost:3000',
     },
   },
 })

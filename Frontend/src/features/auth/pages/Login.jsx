@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { login } from "../services/auth.api";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 const Login = () => {
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -19,6 +20,7 @@ const Login = () => {
       const data = await login(values);
       setSuccess(data.message);
       form.reset();
+      navigate("/", { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Unable to connect. Please try again.");
     } finally {

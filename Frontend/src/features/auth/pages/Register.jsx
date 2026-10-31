@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { register } from "../services/auth.api";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 const Register = () => {
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -19,6 +20,7 @@ const Register = () => {
       const data = await register(values);
       setSuccess(data.message);
       form.reset();
+      navigate("/", { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Unable to connect. Please try again.");
     } finally {
@@ -77,6 +79,10 @@ const Register = () => {
             <input
               type="text"
               name="username"
+              minLength={3}
+              maxLength={40}
+              pattern="[a-zA-Z0-9_.\-]{3,40}"
+              title="3–40 letters, numbers, dots, underscores or hyphens"
               autoComplete="username"
               placeholder="Choose your username"
               required
@@ -95,6 +101,7 @@ const Register = () => {
             <input
               type="email"
               name="email"
+              maxLength={254}
               autoComplete="email"
               placeholder="operator@skillcheck.ai"
               required
@@ -115,6 +122,7 @@ const Register = () => {
             <input
               type="password"
               name="password"
+              minLength={8}
               autoComplete="new-password"
               placeholder="Create your password"
               required
