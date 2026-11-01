@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate, useOutletContext } from "react-router";
 import { extractResume, analyseResume } from "./services/resume.api";
 import AnalysisReport from "./AnalysisReport";
+import { analysisFailure } from "./analysis.utils";
 import { getSession, logout } from "../auth/services/auth.api";
 
 const panel = "border border-neutral-800 bg-neutral-900/60";
@@ -71,6 +72,19 @@ export function Dashboard() {
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalysing, setIsAnalysing] = useState(false);
+  const [checkHistory, setCheckHistory] = useState(false);
+  const [retryAt, setRetryAt] = useState(0);
+  const [clock, setClock] = useState(() => Date.now());
+  const retrySeconds = Math.max(0, Math.ceil((retryAt - clock) / 1000));
+  useEffect(() => {
+    if (!retryAt) return;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setClock(current);
+      if (current >= retryAt) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [retryAt]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -78,6 +92,7 @@ export function Dashboard() {
   function clearAnalysis() {
     setAnalysis(null);
     setAnalysisError('');
+    setCheckHistory(false);
   }
   function chooseFile(candidate) {
     if (isSubmitting || isAnalysing) return;
@@ -112,12 +127,12 @@ export function Dashboard() {
     }
   }
   async function analyse() {
-    if (isAnalysing || isSubmitting || !resume) return;
+    if (isAnalysing || isSubmitting || !resume || retrySeconds > 0) return;
     setAnalysisError('');
     if (!role.trim()) { setAnalysisError('Enter a target role in the form above before analysing.'); return; }
     if (resume.text.trim().length < 50 || resume.text.length > 20000) { setAnalysisError('Analysis needs 50–20,000 characters of resume text. Choose a shorter or more complete resume.'); return; }
-    setAnalysis(null);
     setNeedsLogin(false);
+    setCheckHistory(false);
     setIsAnalysing(true);
     try {
       setAnalysis(await analyseResume({ resumeText: resume.text, targetRole: role, jobDescription: description }));
@@ -127,7 +142,12 @@ export function Dashboard() {
         setNeedsLogin(true);
         setAnalysisError('Your session expired. Sign in, then select your PDF again.');
       } else {
-        setAnalysisError(err.response?.data?.message || 'Could not complete analysis. Check your connection and try again later.');
+        const failure = analysisFailure(err);
+        setAnalysisError(failure.message);
+        setCheckHistory(failure.checkHistory);
+        const current = Date.now();
+        setClock(current);
+        setRetryAt(failure.retryAfter ? current + failure.retryAfter * 1000 : 0);
       }
     } finally {
       setIsAnalysing(false);
@@ -169,9 +189,12 @@ export function Dashboard() {
       <div className="mt-6 border-t border-neutral-800 pt-6">
         <p className="max-w-2xl text-xs leading-6 text-neutral-400">Clicking Analyse resume sends the extracted text, target role and optional job description to OpenRouter and its model provider. Review the text first. The report, extracted text, role and job description will be saved to your account. AI feedback may be wrong.</p>
         {analysisError && <p role="alert" className="mt-4 text-sm text-red-400">{analysisError}</p>}
+        {checkHistory && <Link to="/history" className="mt-3 block text-sm text-red-400 underline">Check My analyses before retrying →</Link>}
         {needsLogin && <Link to="/login" className="mt-3 block text-sm text-red-400 underline">Sign in to analyse →</Link>}
         {isAnalysing && <p role="status" className="mt-4 text-sm text-neutral-300">Analysing your resume. This usually takes under a minute…</p>}
-        <button type="button" onClick={analyse} disabled={isAnalysing || isSubmitting} aria-busy={isAnalysing} className={`${primary} mt-5 disabled:cursor-wait disabled:opacity-60`}>{isAnalysing ? 'Analysing…' : 'Analyse resume'} ↗</button>
+        {retrySeconds > 0 && <p role="status" className="mt-4 text-sm text-neutral-400">You can try again in {retrySeconds} seconds. No automatic retry will run.</p>}
+        <button type="button" onClick={analyse} disabled={isAnalysing || isSubmitting || retrySeconds > 0} aria-busy={isAnalysing} className={`${primary} mt-5 disabled:cursor-wait disabled:opacity-60`}>{isAnalysing ? 'Analysing…' : analysis ? 'Analyse again' : 'Analyse resume'} ↗</button>
+        {analysis && <p className="mt-2 text-xs text-neutral-500">Analysing again makes a new paid request. Your current result stays visible if that request fails.</p>}
       </div>
     </section>}
     {analysis && <AnalysisReport analysis={analysis} />}

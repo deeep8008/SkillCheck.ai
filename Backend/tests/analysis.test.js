@@ -83,6 +83,8 @@ test("sends one bounded structured request and returns a locally validated repor
         assert.deepEqual(body.provider, { require_parameters: true, allow_fallbacks: false });
         assert.deepEqual(JSON.parse(body.messages[1].content), input);
         assert.match(body.messages[0].content, /untrusted data/);
+        assert.match(body.messages[0].content, /Do not expand a Node.js job/);
+        assert.match(body.messages[0].content, /preferred\/nice-to-have skill as mandatory/);
         return Response.json(completion());
     }, async () => {
         const token = cookie();
@@ -111,7 +113,13 @@ test("supports an omitted job description without silently changing resume text"
         const data = JSON.parse(JSON.parse(options.body).messages[1].content);
         assert.equal(data.jobDescription, "");
         assert.equal(data.resumeText, input.resumeText);
-        return Response.json(completion());
+        const general = structuredClone(report);
+        for (const section of ["strengths", "gaps"]) for (const finding of general[section]) {
+            finding.basis = "role_expectation";
+            finding.priority = "medium";
+            finding.requirementEvidence = null;
+        }
+        return Response.json(completion(general));
     }, async () => {
         const response = await request({ resumeText: input.resumeText, targetRole: " Backend Engineer " });
         assert.equal(response.status, 200);
@@ -146,7 +154,6 @@ test("rejects malformed, incomplete, refused, and ungrounded model reports", asy
         { choices: [{ finish_reason: "stop", message: { content: "not JSON" } }] },
         completion(report, "length"), completion({ summary: "Missing fields" }), completion(ungrounded),
         completion(extraField), completion(tooMany), completion(null),
-        { choices: [{ finish_reason: "stop", message: { content: "{}", refusal: "Refused" } }] },
         { choices: [] }
     ];
     for (const payload of responses) {
@@ -156,8 +163,71 @@ test("rejects malformed, incomplete, refused, and ungrounded model reports", asy
             assert.equal((await response.json()).report, undefined);
         });
     }
-    assert.equal(validateReport(report, input.resumeText.replaceAll(" ", "\n")), true);
-    assert.equal(validateReport({ ...report, strengths: [{ ...report.strengths[0], evidence: null }] }, input.resumeText), false);
+    assert.equal(validateReport(report, input.resumeText.replaceAll(" ", "\n"), input.jobDescription), true);
+    assert.equal(validateReport({ ...report, strengths: [{ ...report.strengths[0], evidence: null }] }, input.resumeText, input.jobDescription), false);
+});
+
+test("quality boundaries: explicit requirements need JD quotes and general advice cannot masquerade as a requirement", () => {
+    assert.equal(validateReport(report, input.resumeText, input.jobDescription), true);
+    for (const change of [
+        value => { value.gaps[0].requirementEvidence = "Must have Java and Python"; },
+        value => { value.gaps[0].requirementEvidence = null; },
+        value => { value.gaps[0].basis = "role_expectation"; value.gaps[0].priority = "medium"; value.gaps[0].requirementEvidence = null; },
+        value => { value.gaps[0].priority = "critical"; },
+        value => { value.gaps[0].basis = "invented_source"; }
+    ]) {
+        const value = structuredClone(report);
+        change(value);
+        assert.equal(validateReport(value, input.resumeText, input.jobDescription), false);
+    }
+    assert.equal(validateReport(report, input.resumeText, ""), false);
+    const optional = structuredClone(report);
+    optional.gaps[0].requirementEvidence = "Docker is preferred, not mandatory.";
+    const withPreference = input.jobDescription + " Docker is preferred, not mandatory.";
+    assert.equal(validateReport(optional, input.resumeText, withPreference), false);
+    optional.gaps[0].priority = "low";
+    assert.equal(validateReport(optional, input.resumeText, withPreference), true);
+    const general = structuredClone(report);
+    for (const section of ["strengths", "gaps"]) for (const finding of general[section]) {
+        finding.basis = "role_expectation";
+        finding.priority = "medium";
+        finding.requirementEvidence = null;
+    }
+    assert.equal(validateReport(general, input.resumeText), true);
+    general.gaps[0].priority = "high";
+    assert.equal(validateReport(general, input.resumeText), false);
+    const noFindings = { ...report, strengths: [], gaps: [] };
+    assert.equal(validateReport(noFindings, "A document with no useful resume evidence."), true);
+});
+
+test("provider refusal is actionable, provider Retry-After is preserved, and failures are never stored", async () => {
+    const create = Report.create;
+    try {
+        Report.create = () => { assert.fail("A failed analysis must not be stored"); };
+        for (const payload of [
+            { choices: [{ finish_reason: "stop", message: { content: "{}", refusal: "Private provider reason" } }] },
+            { choices: [{ finish_reason: "content_filter", message: { content: null } }] }
+        ]) {
+            await withProvider(() => Response.json(payload), async () => {
+                const response = await request(input);
+                assert.equal(response.status, 422);
+                const body = await response.json();
+                assert.equal(body.code, "AI_REFUSED");
+                assert.doesNotMatch(body.message, /Private provider reason/);
+            });
+        }
+        await withProvider(() => Response.json({}, { status: 429, headers: { "Retry-After": "120" } }), async () => {
+            const response = await request(input);
+            assert.equal(response.status, 503);
+            assert.equal(response.headers.get("retry-after"), "120");
+            assert.equal((await response.json()).code, "AI_BUSY");
+        });
+        await withProvider(() => Response.json({}, { status: 402 }), async () => {
+            const response = await request(input);
+            assert.equal((await response.json()).code, "AI_CREDITS_EXHAUSTED");
+            assert.equal(response.headers.get("retry-after"), null);
+        });
+    } finally { Report.create = create; }
 });
 
 test("maps provider errors and timeouts without leaking details or retrying", async () => {

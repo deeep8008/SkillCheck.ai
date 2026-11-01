@@ -8,12 +8,18 @@ const report = {
     strengths: [{
         title: "Backend API development",
         evidence: "Built REST APIs using Node.js, Express and MongoDB.",
+        basis: "job_requirement",
+        priority: "medium",
+        requirementEvidence: "Build REST APIs",
         explanation: "This is relevant evidence for the requested API work.",
         suggestion: "Describe one endpoint and your design decisions."
     }],
     gaps: [{
         title: "Testing is not evidenced",
         evidence: null,
+        basis: "job_requirement",
+        priority: "high",
+        requirementEvidence: "write automated tests",
         explanation: "The supplied job description asks for automated tests, but the resume does not describe them.",
         suggestion: "If you have written tests, add a truthful example and the failure it catches."
     }],

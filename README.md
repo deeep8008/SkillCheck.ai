@@ -1,64 +1,67 @@
-# realitycheck.ai
+# SkillCheck.ai
 
-A resume analyser built specifically for developers. Users upload their resume and enter a target job role — the app uses AI to analyse the resume and returns detailed feedback on what's good, what's bad, and why they might not land the job.
+An AI resume analyser for developers, built with JavaScript, Express, MongoDB, React and Vite.
 
-## Tech Stack
+Sign in, upload a text-based PDF, enter a target role and optional job description, then request feedback. Reports include strengths, gaps in the evidence, possible screening concerns, suggested edits, source excerpts and edit priorities. Successful reports are saved privately to the signed-in account.
 
-- **Runtime**: Node.js
-- **Framework**: Express v5
-- **Database**: MongoDB (Mongoose)
-- **Auth**: JWT (stored as cookies)
-- **Password Hashing**: bcryptjs
-- **Environment**: dotenv
+AI feedback is for review and can be wrong. The app does not predict hiring outcomes or verify the truth of resume claims.
 
-## Project Structure
+## Run locally
 
-```
-├── server.js                        # Entry point
-├── .env                             # Secrets (not committed)
-├── src/
-│   ├── app.js                       # Express app, middleware, routes
-│   ├── config/
-│   │   └── database.js              # MongoDB connection
-│   ├── models/
-│   │   └── user.model.js            # User schema
-│   ├── controllers/
-│   │   └── auth.controller.js       # Register & login logic
-│   └── routes/
-│       └── auth.routes.js           # Auth routes
+Use Node 24 and a reachable MongoDB database. Install dependencies from the repository root:
+
+```powershell
+npm --prefix Backend ci
+npm --prefix Frontend ci
 ```
 
-## API Endpoints
+Create `Backend/.env` from [the example](Backend/.env.example) if it does not already exist. Preserve any existing secrets. Set `MONGO_URI`, `JWT_SECRET`, and `OPENROUTER_API_KEY`; the default model is `google/gemini-2.5-flash-lite`. Never put the key in frontend code or commit your `.env`.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/register` | Register a new user |
-| POST | `/auth/login` | Login with email & password |
+Double-click **start server.bat** to open both development servers and the browser. Alternatively run `npm run dev` inside `Backend` and `Frontend` in separate terminals. Close existing server windows before launching another pair.
 
-## Running the Project
+PDF extraction works without an AI key in development. Clicking **Analyse resume** sends the extracted text, role and job description to OpenRouter and its selected model provider and uses API credits. The PDF itself is not saved; successful analyses store the text and feedback in MongoDB. Viewing saved history makes no model request.
 
-```bash
-npm run dev    # with nodemon (auto-restart)
-npm start      # plain node
+## Checks
+
+Inside `Backend`, run `npm test`. The two live MongoDB checks are opt-in:
+
+```powershell
+$env:RUN_LIVE_DB_TESTS = '1'
+npm test
+Remove-Item Env:RUN_LIVE_DB_TESTS
 ```
 
-Server runs on `http://localhost:3000`
+These tests use synthetic data and simulated OpenRouter responses, not paid model calls. The live checks create and clean up only their own test records.
 
-## What's Built
+Inside `Frontend`:
 
-- [x] Project setup (Express, Mongoose, dotenv)
-- [x] User model (username, email, password)
-- [x] Register endpoint with bcrypt password hashing
-- [x] Login endpoint with JWT cookie
-- [x] Proper HTTP status codes (400, 401, 404, 409, 500)
-- [x] Git initialised with .gitignore
+```powershell
+npm run build
+npm run lint
+node --test tests/analysis-feedback.test.mjs
+```
 
-## What's Left to Build
+## Main API routes
 
-- [ ] Logout endpoint
-- [ ] Auth middleware (protect routes with JWT)
-- [ ] Resume upload (PDF parsing)
-- [ ] AI integration (Gemini API) for resume analysis
-- [ ] Store analysis results in MongoDB
-- [ ] Frontend
-- [ ] Deployment
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/auth/register`, `/auth/login`, `/auth/logout` | Cookie-based authentication |
+| GET | `/auth/me` | Current signed-in account |
+| POST | `/resumes` | Authenticated PDF extraction, up to 3 MB |
+| POST | `/resumes/analyze` | Authenticated AI analysis and automatic report saving |
+| GET | `/reports?page=1` | Current user's report summaries, 20 per page |
+| GET | `/reports/:id` | One report owned by the current user |
+| GET | `/health` | Database connection readiness |
+
+## Deployment
+
+The production Express server serves `Frontend/dist` and the API from one HTTPS website. See [deployment settings, request limits and preview commands](docs/deployment.md). Hosting and public deployment are not configured yet. In-memory request limits target a small single-process demo; they are not distributed limits or a hard account spending cap.
+
+## Walkthroughs
+
+- [PDF upload and extraction](docs/resume-upload.md)
+- [OpenRouter analysis](docs/resume-analysis.md)
+- [Saved reports and ownership](docs/report-storage.md)
+- [Report quality and error recovery](docs/report-quality.md)
+
+GitHub code review, RAG, queues, resume comparisons and report editing/deletion are not implemented. `reference-interview-ai/` is a separately cloned reference repository and is excluded from this repository.

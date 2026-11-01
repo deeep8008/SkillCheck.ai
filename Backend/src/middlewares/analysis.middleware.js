@@ -30,13 +30,13 @@ function createAnalysisLimiter({ now = Date.now } = {}) {
         const id = String(req.user.id);
         const record = users.get(id);
         if (record && (record.inFlight || record.count >= 5 || time < record.nextAt)) {
-            const wait = record.count >= 5 ? record.expiresAt - time : Math.max(30000, record.nextAt - time);
-            res.set("Retry-After", String(Math.ceil(wait / 1000)));
-            return res.status(429).json({ message: record.count >= 5 ? "You have reached 5 analysis attempts this hour. Please try again later." : "An analysis is running or was just requested. Wait at least 30 seconds before trying again." });
+            const wait = record.count >= 5 ? record.expiresAt - time : record.inFlight ? Math.max(1000, record.nextAt - time) : record.nextAt - time;
+            res.set("Retry-After", String(Math.max(1, Math.ceil(wait / 1000))));
+            return res.status(429).json({ code: record.count >= 5 ? "ANALYSIS_LIMIT" : "ANALYSIS_COOLDOWN", message: record.count >= 5 ? "You have reached 5 analysis attempts this hour. Please try again later." : record.inFlight ? "An analysis is already running. Please wait for it to finish." : "An analysis was just requested. Wait for the retry timer before trying again." });
         }
         if (active >= 2 || (!record && users.size >= 1000)) {
             res.set("Retry-After", "30");
-            return res.status(503).json({ message: "Analysis is busy. Please try again shortly." });
+            return res.status(503).json({ code: "ANALYSIS_BUSY", message: "Analysis is busy. Please try again shortly." });
         }
         const entry = record || { count: 0, expiresAt: time + 3600000 };
         entry.count++;
@@ -44,6 +44,7 @@ function createAnalysisLimiter({ now = Date.now } = {}) {
         entry.inFlight = true;
         users.set(id, entry);
         active++;
+        req.analysisRetryAfter = () => Math.max(0, Math.ceil((entry.nextAt - now()) / 1000));
         req.releaseAnalysis = () => {
             entry.inFlight = false;
             active--;

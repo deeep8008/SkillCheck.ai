@@ -11,7 +11,7 @@ const reportSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed,
         required: true,
         validate: {
-            validator(value) { return validateReport(value, this.resumeText || ""); },
+            validator(value) { return validateReport(value, this.resumeText || "", this.jobDescription || ""); },
             message: "Report structure or resume evidence is invalid."
         }
     }

@@ -89,6 +89,12 @@ test("live MongoDB: register, login, extract PDF, logout, reject replayed token"
     let createdUserId, loggedOutToken;
     try {
         await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+        const health = await fetch(`${base}/health`);
+        assert.equal(health.status, 200);
+        assert.deepEqual(await health.json(), { status: "ok" });
+        app.locals.shuttingDown = true;
+        assert.equal((await fetch(`${base}/health`)).status, 503);
+        app.locals.shuttingDown = false;
         await Promise.all([User.init(), Blacklist.init()]);
         const details = { username, email: `${username}@example.invalid`, password: "Test-only-pass-123" };
         const registered = await post("/auth/register", details);

@@ -4,10 +4,11 @@ const { uploadResume } = require("../middlewares/resume.middleware");
 const { extractResume } = require("../controllers/resume.controller");
 const { analyse, requireAnalysisConfig } = require("../controllers/analysis.controller");
 const { validateAnalysisInput, createAnalysisLimiter } = require("../middlewares/analysis.middleware");
+const { createRequestLimit } = require("../middlewares/request-limit.middleware");
 
 const resumeRouter = Router();
 // Authenticate before accepting the upload into memory.
-resumeRouter.post("/", authUser, uploadResume, extractResume);
+resumeRouter.post("/", authUser, createRequestLimit({ limit: 20, windowMs: 60000, key: req => req.user.id, code: "UPLOAD_LIMIT", message: "You have reached 20 PDF uploads this minute. Wait before uploading again." }), uploadResume, extractResume);
 resumeRouter.post("/analyze", authUser, (_req, res, next) => {
     res.set("Cache-Control", "no-store");
     next();

@@ -1,10 +1,13 @@
 const findingSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["title", "evidence", "explanation", "suggestion"],
+    required: ["title", "evidence", "explanation", "suggestion", "basis", "priority", "requirementEvidence"],
     properties: {
         title: { type: "string", minLength: 1, maxLength: 100 },
         evidence: { type: ["string", "null"], minLength: 1, maxLength: 500 },
+        basis: { type: "string", minLength: 1, maxLength: 30, enum: ["job_requirement", "role_expectation", "resume_clarity"] },
+        priority: { type: "string", minLength: 1, maxLength: 10, enum: ["high", "medium", "low"] },
+        requirementEvidence: { type: ["string", "null"], minLength: 1, maxLength: 500 },
         explanation: { type: "string", minLength: 1, maxLength: 700 },
         suggestion: { type: "string", minLength: 1, maxLength: 600 }
     }
@@ -25,6 +28,7 @@ const reportSchema = {
 
 // Validate the small schema above locally too; JSON parsing alone isn't validation.
 function matchesSchema(value, schema) {
+    if (schema.enum && !schema.enum.includes(value)) return false;
     if (value === null) return Array.isArray(schema.type) && schema.type.includes("null");
     if (schema.type === "string" || Array.isArray(schema.type)) {
         return typeof value === "string" && value.trim().length >= schema.minLength && value.length <= schema.maxLength;
@@ -42,14 +46,22 @@ function matchesSchema(value, schema) {
     return false;
 }
 
-function validateReport(report, resumeText) {
+function validateReport(report, resumeText, jobDescription = "") {
     if (!matchesSchema(report, reportSchema)) return false;
     const normalize = text => text.replace(/\s+/g, " ").trim();
     const source = normalize(resumeText);
+    const requirements = normalize(jobDescription);
     for (const section of ["strengths", "gaps", "screeningConcerns"]) {
         for (const finding of report[section]) {
             if (section === "strengths" && finding.evidence === null) return false;
             if (finding.evidence !== null && !source.includes(normalize(finding.evidence))) return false;
+            if (finding.basis === "job_requirement") {
+                if (!requirements || finding.requirementEvidence === null || !requirements.includes(normalize(finding.requirementEvidence))) return false;
+                if (finding.priority === "high" && /\b(preferred|optional|nice[- ]to[- ]have|not (?:mandatory|required)|does not require)\b/i.test(finding.requirementEvidence)) return false;
+            } else if (finding.requirementEvidence !== null || finding.priority === "high") return false;
+            // When a JD is supplied, gaps must refer to its actual requirements.
+            if (section === "gaps" && requirements && finding.basis !== "job_requirement") return false;
+            if (section === "gaps" && finding.basis === "resume_clarity") return false;
         }
     }
     return true;

@@ -6,7 +6,7 @@ function requireAnalysisConfig(_req, res, next) {
         getAnalysisConfig();
         next();
     } catch (error) {
-        res.status(error.status).json({ message: error.message });
+        res.status(error.status).json({ message: error.message, code: error.code });
     }
 }
 
@@ -27,7 +27,9 @@ async function analyse(req, res) {
         }
     } catch (error) {
         // Never forward raw provider errors, request bodies, or credentials.
-        res.status(error.status || 500).json({ message: error.status ? error.message : "Could not analyse your resume. Please try again later." });
+        const wait = error.retryable === false ? 0 : Math.max(error.retryAfter || 0, req.analysisRetryAfter?.() || 0);
+        if (wait > 0) res.set("Retry-After", String(wait));
+        res.status(error.status || 500).json({ message: error.status ? error.message : "Could not analyse your resume. Please try again later.", code: error.code || "ANALYSIS_FAILED" });
     } finally {
         req.releaseAnalysis();
     }
