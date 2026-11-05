@@ -6,18 +6,41 @@ const sourceLabels = {
   role_expectation: 'General role expectation',
   resume_clarity: 'Resume clarity'
 };
+const requirementStatus = {
+  supported: 'Supported',
+  unclear: 'Unclear',
+  no_evidence: 'No evidence found'
+};
+
+function RequirementMap({ rows }) {
+  return <section aria-label="Job requirement map" className="space-y-3">
+    <h4 className="text-lg font-semibold">Job requirement map</h4>
+    <p className="text-[20px] text-neutral-400">How your resume addresses selected qualifications from the posting.</p>
+    {rows.map(row => <article key={row.jobQuote} className="space-y-3 break-words rounded-xl border border-neutral-800 p-3 text-[20px] leading-7">
+      <p className={row.status === 'supported' ? 'text-emerald-300' : 'text-amber-300'}>
+        {requirementStatus[row.status]}{row.preferred && ' · Preferred'}
+      </p>
+      <dl className="space-y-2">
+        <div><dt className="font-semibold">What the job asks for</dt><dd className="text-neutral-300">“{row.jobQuote}”</dd></div>
+        <div><dt className="font-semibold">What your resume says</dt><dd className="text-neutral-300">{row.resumeQuote ? `“${row.resumeQuote}”` : 'No relevant quote in the excerpts reviewed.'}</dd></div>
+        <div><dt className="font-semibold">How it matches</dt><dd className="text-neutral-300">{row.explanation}</dd></div>
+        <div><dt className="font-semibold">What to improve or keep</dt><dd className="text-neutral-300">{row.nextStep}</dd></div>
+      </dl>
+    </article>)}
+  </section>;
+}
 
 function Branch({ label, description, count, empty, children }) {
   return <details className="report-branch group min-w-0 rounded-2xl border border-neutral-800 bg-neutral-900/80 open:border-red-500/50">
     <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-2xl p-5 focus-visible:outline-2 focus-visible:outline-red-400 sm:p-6 [&::-webkit-details-marker]:hidden">
       <div>
         <h3 className="text-2xl font-semibold">{label}</h3>
-        <p className="mt-2 text-sm leading-5 text-neutral-400">{description}</p>
+        <p className="mt-2 text-[20px] leading-7 text-neutral-400">{description}</p>
       </div>
-      <span aria-hidden="true" className="shrink-0 rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-red-300">{count} <span className="group-open:hidden">+</span><span className="hidden group-open:inline">−</span></span>
+      <span aria-hidden="true" className="shrink-0 rounded-full border border-neutral-700 px-2.5 py-1 text-sm text-red-300">{count} <span className="group-open:hidden">+</span><span className="hidden group-open:inline">−</span></span>
     </summary>
     <div className="report-branch-content space-y-5 border-t border-neutral-800 px-5 py-5 sm:px-6">
-      {count ? children : <p className="text-sm text-neutral-400">{empty}</p>}
+      {count ? children : <p className="text-[20px] text-neutral-400">{empty}</p>}
     </div>
   </details>;
 }
@@ -25,16 +48,17 @@ function Branch({ label, description, count, empty, children }) {
 function Finding({ finding }) {
   return <article className="space-y-2 border-b border-neutral-800 pb-4 last:border-0 last:pb-0">
     <h4 className="font-semibold text-neutral-100">{finding.title}</h4>
-    {finding.basis && <p className="text-xs text-red-300">{sourceLabels[finding.basis]} · {finding.priority} priority</p>}
-    <p className="text-sm leading-6 text-neutral-300">{finding.explanation}</p>
-    {finding.evidence && <blockquote className="break-words border-l-2 border-red-500/50 pl-3 text-sm italic text-neutral-400">“{finding.evidence}”</blockquote>}
-    {finding.requirementEvidence && <p className="break-words text-sm text-neutral-400">Job description · “{finding.requirementEvidence}”</p>}
+    {finding.basis && <p className="text-sm text-red-300">{sourceLabels[finding.basis]} · {finding.priority} priority</p>}
+    <p className="text-[20px] leading-7 text-neutral-300">{finding.explanation}</p>
+    {finding.evidence && <blockquote className="break-words border-l-2 border-red-500/50 pl-3 text-[20px] italic text-neutral-400">“{finding.evidence}”</blockquote>}
+    {finding.requirementEvidence && <p className="break-words text-[20px] text-neutral-400">Job description · “{finding.requirementEvidence}”</p>}
   </article>;
 }
 
 export default function AnalysisReport({ analysis, sample = false }) {
   const { report, model, targetRole } = analysis;
   const weaknesses = [...report.gaps, ...report.screeningConcerns];
+  const requirementMap = report.requirementMap ?? [];
   const edits = [...new Map([...priorityEdits(report), ...weaknesses, ...report.strengths]
     .map(item => [item.suggestion.trim().toLowerCase(), item])).values()];
 
@@ -61,17 +85,19 @@ export default function AnalysisReport({ analysis, sample = false }) {
       <Branch label="Strengths" description="What your resume backs up well." count={report.strengths.length} empty="No clear strengths were identified.">
         {report.strengths.map((finding, index) => <Finding key={index} finding={finding} />)}
       </Branch>
-      <Branch label="Weaknesses" description="Where your evidence could be clearer." count={weaknesses.length} empty="No specific gaps were identified.">
+      <Branch label="Weaknesses" description={requirementMap.length ? 'Compare your resume with the job posting.' : 'Where your evidence could be clearer.'} count={weaknesses.length + requirementMap.length} empty="No specific gaps were identified.">
+        {requirementMap.length > 0 && <RequirementMap rows={requirementMap} />}
+        {requirementMap.length > 0 && weaknesses.length > 0 && <h4 className="border-t border-neutral-800 pt-4 text-lg font-semibold">Gaps and concerns</h4>}
         {weaknesses.map((finding, index) => <Finding key={index} finding={finding} />)}
       </Branch>
       <Branch label="Improvements" description="Specific edits you can make next." count={edits.length} empty="No specific edits were suggested.">
-        <ol className="list-decimal space-y-4 pl-5 text-sm leading-6 text-neutral-300">
+        <ol className="list-decimal space-y-4 pl-5 text-[20px] leading-7 text-neutral-300">
           {edits.map(item => <li key={item.suggestion} className="break-words">{item.suggestion}</li>)}
         </ol>
       </Branch>
     </div>
     {!sample && <div className="mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 text-sm text-neutral-400">
-      {analysis.saved ? <Link to="/history" className="text-red-300 underline">Saved to My analyses</Link> : <>
+      {analysis.saved ? <Link to="/history" className="text-red-300 underline">Saved to History</Link> : <>
         <p role="alert" className="text-amber-300">{analysis.saveError || 'Saving was not confirmed. Keep this page open and check history before generating again.'}</p>
         <button type="button" onClick={downloadReport} className="text-red-300 underline">Download report</button>
       </>}

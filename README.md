@@ -19,7 +19,7 @@ Create `Backend/.env` from [the example](Backend/.env.example) if it does not al
 
 Double-click **start server.bat** to open both development servers and the browser. Alternatively run `npm run dev` inside `Backend` and `Frontend` in separate terminals. Close existing server windows before launching another pair.
 
-PDF extraction works without an AI key in development. Clicking **Analyse resume** sends the extracted text, role and job description to OpenRouter and its selected model provider and uses API credits. The PDF itself is not saved; successful analyses store the text and feedback in MongoDB. Viewing saved history makes no model request.
+PDF extraction works without an AI key in development. Clicking **Analyse** uses OpenRouter credits. With a job description, an embedding model processes the job and resume excerpts to shortlist two resume passages per job excerpt. Gemini receives the shortlist, ordered job excerpts and target role. It also receives the full posting when the shortlist cannot cover all job excerpts. Without a job description, Gemini receives the full extracted resume and target role. Successful analyses store the extracted text and feedback in MongoDB. The PDF itself is discarded after extraction. Viewing saved history makes no model request.
 
 ## Checks
 

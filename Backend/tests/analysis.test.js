@@ -7,7 +7,7 @@ const app = require("../src/app");
 const { analyseResume } = require("../src/services/analysis.service");
 const { validateReport } = require("../src/services/analysis.schema");
 const { createAnalysisLimiter } = require("../src/middlewares/analysis.middleware");
-const { input, report, completion } = require("../test-support/analysis");
+const { input, report, completion, mockEmbeddings } = require("../test-support/analysis");
 
 const realFetch = global.fetch;
 const originalLookup = blacklist.findOne;
@@ -47,6 +47,7 @@ function request(body, token = cookie()) {
 }
 async function withProvider(handler, task) {
     global.fetch = async (url, options) => {
+        if (url === "https://openrouter.ai/api/v1/embeddings") return mockEmbeddings(options);
         assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
         return handler(options);
     };
@@ -70,8 +71,9 @@ test("requires login and validates analysis input without calling OpenRouter", a
     });
 });
 
-test("sends one bounded structured request and returns a locally validated report", async () => {
+test("sends shortlisted bullets in one structured Gemini request and saves the original resume", async () => {
     let calls = 0;
+    const submitted = { ...input, resumeText: input.resumeText + "\nDesigned wedding invitations." };
     await withProvider(options => {
         calls++;
         const body = JSON.parse(options.body);
@@ -81,14 +83,21 @@ test("sends one bounded structured request and returns a locally validated repor
         assert.equal(body.response_format.type, "json_schema");
         assert.equal(body.response_format.json_schema.strict, true);
         assert.deepEqual(body.provider, { require_parameters: true, allow_fallbacks: false });
-        assert.deepEqual(JSON.parse(body.messages[1].content), input);
+        const prompt = JSON.parse(body.messages[1].content);
+        assert.equal(prompt.resumeText, undefined);
+        assert.equal(prompt.jobDescription, undefined);
+        assert.equal(prompt.targetRole, input.targetRole);
+        const [candidate] = prompt.requirementCandidates;
+        assert.equal(candidate.jobExcerpt, input.jobDescription);
+        assert.equal(prompt.resumeBullets[candidate.resumeBulletIds[0]], report.strengths[0].evidence);
+        assert.doesNotMatch(JSON.stringify(prompt), /wedding invitations/);
         assert.match(body.messages[0].content, /untrusted data/);
         assert.match(body.messages[0].content, /Do not expand a Node.js job/);
         assert.match(body.messages[0].content, /preferred\/nice-to-have skill as mandatory/);
         return Response.json(completion());
     }, async () => {
         const token = cookie();
-        const response = await request(input, token);
+        const response = await request(submitted, token);
         assert.equal(response.status, 200);
         assert.equal(response.headers.get("cache-control"), "no-store");
         const result = await response.json();
@@ -96,7 +105,7 @@ test("sends one bounded structured request and returns a locally validated repor
         assert.equal(result.saved, true);
         assert.equal(result.id, "507f1f77bcf86cd799439011");
         assert.equal(lastSaved.owner, jwt.decode(token.slice(6)).id);
-        assert.equal(lastSaved.resumeText, input.resumeText);
+        assert.equal(lastSaved.resumeText, submitted.resumeText);
         assert.equal(lastSaved.jobDescription, input.jobDescription);
         assert.deepEqual(lastSaved.report, report);
         assert.equal(result.targetRole, input.targetRole);
@@ -113,7 +122,7 @@ test("supports an omitted job description without silently changing resume text"
         const data = JSON.parse(JSON.parse(options.body).messages[1].content);
         assert.equal(data.jobDescription, "");
         assert.equal(data.resumeText, input.resumeText);
-        const general = structuredClone(report);
+        const general = { ...structuredClone(report), requirementMap: [] };
         for (const section of ["strengths", "gaps"]) for (const finding of general[section]) {
             finding.basis = "role_expectation";
             finding.priority = "medium";
@@ -124,6 +133,19 @@ test("supports an omitted job description without silently changing resume text"
         const response = await request({ resumeText: input.resumeText, targetRole: " Backend Engineer " });
         assert.equal(response.status, 200);
         assert.equal((await response.json()).targetRole, "Backend Engineer");
+    });
+});
+
+test("rejects a real resume quote that Gemini did not receive for that requirement", async () => {
+    const distractor = "Designed wedding invitations.";
+    const unsupported = structuredClone(report);
+    unsupported.requirementMap[0].resumeQuote = distractor;
+    const submitted = { ...input, resumeText: input.resumeText + "\n" + distractor };
+    assert.equal(validateReport(unsupported, submitted.resumeText, submitted.jobDescription), true);
+    await withProvider(() => Response.json(completion(unsupported)), async () => {
+        const response = await request(submitted);
+        assert.equal(response.status, 502);
+        assert.equal((await response.json()).code, "AI_INVALID_REPORT");
     });
 });
 
@@ -167,6 +189,21 @@ test("rejects malformed, incomplete, refused, and ungrounded model reports", asy
     assert.equal(validateReport({ ...report, strengths: [{ ...report.strengths[0], evidence: null }] }, input.resumeText, input.jobDescription), false);
 });
 
+test("requirement map checks quotes, evidence status, and optional wording", () => {
+    const [api, tests] = report.requirementMap;
+    const preferred = { ...tests, jobQuote: "Docker is preferred.", preferred: true };
+    const jobDescription = input.jobDescription + " Docker is preferred.";
+    const validate = requirementMap => validateReport({ ...report, requirementMap }, input.resumeText, jobDescription);
+    assert.equal(validate([api, tests, preferred]), true);
+    assert.equal(validate([{ ...api, status: "unclear" }]), true);
+    assert.equal(validate([{ ...api, jobQuote: "Manage Kubernetes clusters" }]), false);
+    assert.equal(validate([{ ...api, resumeQuote: "Built APIs in Python." }]), false);
+    assert.equal(validate([{ ...api, resumeQuote: null }]), false);
+    assert.equal(validate([{ ...api, status: "no_evidence" }]), false);
+    assert.equal(validate([{ ...preferred, preferred: false }]), false);
+    assert.equal(validate([api, api]), false);
+});
+
 test("quality boundaries: explicit requirements need JD quotes and general advice cannot masquerade as a requirement", () => {
     assert.equal(validateReport(report, input.resumeText, input.jobDescription), true);
     for (const change of [
@@ -187,7 +224,7 @@ test("quality boundaries: explicit requirements need JD quotes and general advic
     assert.equal(validateReport(optional, input.resumeText, withPreference), false);
     optional.gaps[0].priority = "low";
     assert.equal(validateReport(optional, input.resumeText, withPreference), true);
-    const general = structuredClone(report);
+    const general = { ...structuredClone(report), requirementMap: [] };
     for (const section of ["strengths", "gaps"]) for (const finding of general[section]) {
         finding.basis = "role_expectation";
         finding.priority = "medium";
@@ -196,7 +233,7 @@ test("quality boundaries: explicit requirements need JD quotes and general advic
     assert.equal(validateReport(general, input.resumeText), true);
     general.gaps[0].priority = "high";
     assert.equal(validateReport(general, input.resumeText), false);
-    const noFindings = { ...report, strengths: [], gaps: [] };
+    const noFindings = { ...report, strengths: [], gaps: [], requirementMap: [] };
     assert.equal(validateReport(noFindings, "A document with no useful resume evidence."), true);
 });
 

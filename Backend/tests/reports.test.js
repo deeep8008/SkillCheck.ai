@@ -7,7 +7,7 @@ const app = require("../src/app");
 const Report = require("../src/models/report.model");
 const User = require("../src/models/user.model");
 const Blacklist = require("../src/models/blacklist.model");
-const { input, report, completion } = require("../test-support/analysis");
+const { input, report, completion, mockEmbeddings } = require("../test-support/analysis");
 
 const realFetch = global.fetch;
 const originalSecret = process.env.JWT_SECRET;
@@ -136,7 +136,8 @@ test("live MongoDB: save through analysis, reload from storage, paginate, isolat
     try {
         process.env.OPENROUTER_API_KEY = "fake-live-db-test-key";
         process.env.OPENROUTER_MODEL = "test-model";
-        global.fetch = async url => {
+        global.fetch = async (url, options) => {
+            if (url === "https://openrouter.ai/api/v1/embeddings") return mockEmbeddings(options);
             assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
             return Response.json(completion());
         };

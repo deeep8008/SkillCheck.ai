@@ -50,7 +50,7 @@ export function Workspace() {
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-5 px-6 py-5 lg:px-10">
         <Link to="/" className={`${heading} text-xl font-black tracking-tight`}>SKILLCHECK<span className="text-red-500">.ai</span></Link>
         <nav aria-label="Main navigation" className="flex gap-6 text-sm">
-          {[['/', 'Workspace'], ['/history', 'My analyses']].map(([to, label]) => <NavLink key={to} to={to} end className={({isActive}) => isActive ? 'text-white underline decoration-red-500 decoration-2 underline-offset-8' : 'text-neutral-400 hover:text-white'}>{label}</NavLink>)}
+          {[['/', 'Workspace'], ['/history', 'History']].map(([to, label]) => <NavLink key={to} to={to} end className={({isActive}) => isActive ? 'text-white underline decoration-red-500 decoration-2 underline-offset-8' : 'text-neutral-400 hover:text-white'}>{label}</NavLink>)}
         </nav>
         {checkingSession ? <span role="status" className="text-xs text-neutral-400">Checking session…</span> : user ? <div className="flex items-center gap-4 text-xs"><span>Signed in as {user.username}</span><button type="button" disabled={signingOut} onClick={signOut} className="border border-neutral-700 px-4 py-2 hover:border-red-500 disabled:opacity-60">{signingOut ? 'Signing out…' : 'Sign out'}</button></div> : <Link to="/login" className="border border-neutral-700 px-4 py-2 text-xs hover:border-red-500">SIGN IN ↗</Link>}
       </div>
@@ -179,13 +179,13 @@ export function Dashboard() {
         <div className="mt-7"><label htmlFor="job-description" className="flex flex-wrap items-center justify-between gap-2 text-sm"><span><span className="mr-3 font-mono text-red-500">03</span>Job description</span><span className="text-xs text-neutral-500">Optional · adds context</span></label><textarea id="job-description" value={description} onChange={event => {setDescription(event.target.value); clearAnalysis();}} maxLength={5000} rows={4} placeholder="Paste the job requirements for a more specific comparison…" className={`${field} resize-y`} /><p className="mt-1 text-right font-mono text-[10px] text-neutral-500">{description.length} / 5,000</p></div>
         <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-neutral-800 pt-5">
           <button className={primary + " rounded-lg disabled:opacity-60"} type="submit" disabled={retrySeconds > 0} aria-busy={busy}>{busy ? 'Analysing…' : analysis ? 'Analyse again' : 'Analyse'}</button>
-          <p className="text-xs text-neutral-400">Sends extracted text and role details to OpenRouter. Uses AI credits.</p>
+          <p className="text-xs text-neutral-400">Uses AI credits. OpenRouter and its model providers process the extracted text and role details.</p>
         </div>
       </fieldset>
       {busy && <AnalysisProgress stage={stage} />}
       {analysisError && <p role="alert" className="mt-4 text-sm text-red-400">{analysisError}</p>}
       {needsLogin && <Link to="/login" className="mt-3 inline-block text-sm text-red-300 underline">Sign in</Link>}
-      {checkHistory && <Link to="/history" className="mt-3 block text-sm text-red-300 underline">Check My analyses before retrying</Link>}
+      {checkHistory && <Link to="/history" className="mt-3 block text-sm text-red-300 underline">Check History before retrying</Link>}
       {retrySeconds > 0 && <p className="mt-3 text-sm text-neutral-400">Try again in {retrySeconds} seconds.</p>}
       {resume && !busy && <details className="mt-4 text-sm text-neutral-400">
         <summary className="cursor-pointer">View extracted text · {resume.pageCount} page(s)</summary>
@@ -245,6 +245,21 @@ const sampleAnalysis = {
     strengths: sampleFindings(sections.Strengths),
     gaps: sampleFindings(sections.Gaps),
     screeningConcerns: sampleFindings(sections['Screening risks']),
+    requirementMap: [{
+      jobQuote: 'Build REST APIs with Node.js.',
+      resumeQuote: 'Built REST APIs using Node.js, Express, and MongoDB.',
+      status: 'supported',
+      preferred: false,
+      explanation: 'The resume describes building APIs with the requested stack.',
+      nextStep: 'Keep this bullet and name one endpoint you designed.'
+    }, {
+      jobQuote: 'Write automated integration tests.',
+      resumeQuote: null,
+      status: 'no_evidence',
+      preferred: false,
+      explanation: 'The fictional resume gives no example of automated testing.',
+      nextStep: 'If you wrote integration tests, name the tool and a failure one test catches.'
+    }],
     limitations: ['This example uses a fictional resume.']
   }
 };

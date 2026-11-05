@@ -1,7 +1,7 @@
 export function analysisFailure(error, now = Date.now()) {
   if (!error.response) {
     return {
-      message: "The connection ended before the result was confirmed. Check My analyses before trying again; your report may already have been saved.",
+      message: "The connection ended before the result was confirmed. Check History before trying again; your report may already have been saved.",
       checkHistory: true,
       retryAfter: 30
     };

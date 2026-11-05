@@ -25,9 +25,32 @@ const report = {
         suggestion: "If you have written tests, add a truthful example and the failure it catches."
     }],
     screeningConcerns: [],
+    requirementMap: [{
+        jobQuote: "Build REST APIs",
+        resumeQuote: "Built REST APIs using Node.js, Express and MongoDB.",
+        status: "supported",
+        preferred: false,
+        explanation: "The resume gives a direct example of building APIs.",
+        nextStep: "Keep the API example and name one endpoint."
+    }, {
+        jobQuote: "write automated tests",
+        resumeQuote: null,
+        status: "no_evidence",
+        preferred: false,
+        explanation: "The resume gives no testing example.",
+        nextStep: "Add an example if you wrote automated tests."
+    }],
     limitations: ["A resume cannot verify implementation quality or the candidate's full abilities."]
 };
 function completion(value = report, finishReason = "stop") {
     return { choices: [{ finish_reason: finishReason, message: { content: JSON.stringify(value) } }] };
 }
-module.exports = { input, report, completion };
+function mockEmbeddings(options) {
+    const { input: texts } = JSON.parse(options.body);
+    const data = texts.map((text, index) => ({
+        index,
+        embedding: /REST APIs/i.test(text) ? [3, 0, 0] : /JWT/i.test(text) ? [1, 1, 0] : [0, 0, 1]
+    }));
+    return Response.json({ data: data.reverse() });
+}
+module.exports = { input, report, completion, mockEmbeddings };
