@@ -15,7 +15,7 @@ npm --prefix Backend ci
 npm --prefix Frontend ci
 ```
 
-Create `Backend/.env` from [the example](Backend/.env.example) if it does not already exist. Preserve any existing secrets. Set `MONGO_URI`, `JWT_SECRET`, and `OPENROUTER_API_KEY`; the default model is `google/gemini-2.5-flash-lite`. Never put the key in frontend code or commit your `.env`.
+Create `Backend/.env` from [the example](Backend/.env.example) if it does not already exist. Preserve any existing secrets. Set `MONGO_URI`, `JWT_SECRET`, and `OPENROUTER_API_KEY`; the default model is `google/gemini-3.8-flash`. Never put the key in frontend code or commit your `.env`.
 
 Double-click **start server.bat** to open both development servers and the browser. Alternatively run `npm run dev` inside `Backend` and `Frontend` in separate terminals. Close existing server windows before launching another pair.
 

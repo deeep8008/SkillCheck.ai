@@ -29,7 +29,7 @@ const Login = () => {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-950 p-6 font-['Space_Grotesk',sans-serif] selection:bg-red-500 selection:text-white">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-950 p-6 selection:bg-red-500 selection:text-white">
       {/* Subtle Futuristic Grid Background */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#262626_1px,transparent_1px),linear-gradient(to_bottom,#262626_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-35" />
 
@@ -51,7 +51,7 @@ const Login = () => {
 
         {/* Brand Header */}
         <div className="mb-10 flex flex-wrap items-center justify-between gap-3">
-          <p className="font-['Orbitron',sans-serif] text-xl font-extrabold tracking-wider text-white uppercase">
+          <p className="font-display text-xl font-extrabold tracking-wider text-white uppercase">
             SkillCheck<span className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]">.ai</span>
           </p>
           <span className="inline-flex items-center gap-1.5 border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-widest text-red-400 uppercase">
@@ -62,7 +62,7 @@ const Login = () => {
 
         {/* Title */}
         <div className="mb-8">
-          <h1 className="font-['Orbitron',sans-serif] text-2xl font-bold tracking-wide text-white uppercase sm:text-3xl">
+          <h1 className="font-display text-2xl font-bold tracking-wide text-white uppercase sm:text-3xl">
             System Login
           </h1>
           <p className="mt-1.5 text-xs tracking-wider text-neutral-400 uppercase">
@@ -116,7 +116,7 @@ const Login = () => {
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting}
-          className="disabled:cursor-wait disabled:opacity-60 group relative w-full cursor-pointer overflow-hidden bg-red-600 py-3.5 font-['Orbitron',sans-serif] text-sm font-bold tracking-widest text-white uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:bg-red-500 hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 active:scale-[0.99]"
+          className="disabled:cursor-wait disabled:opacity-60 group relative w-full cursor-pointer overflow-hidden bg-red-600 py-3.5 text-sm font-bold tracking-widest text-white uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all duration-300 hover:bg-red-500 hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-500 active:scale-[0.99]"
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
             {isSubmitting ? "Signing in..." : "Authenticate"}

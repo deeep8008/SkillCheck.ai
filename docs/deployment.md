@@ -42,7 +42,7 @@ NODE_ENV=production
 MONGO_URI=your_private_mongodb_connection_string
 JWT_SECRET=your_long_random_secret
 OPENROUTER_API_KEY=your_private_key
-OPENROUTER_MODEL=google/gemini-2.5-flash-lite
+OPENROUTER_MODEL=google/gemini-3.8-flash
 APP_ORIGIN=https://your-actual-hostname.example
 TRUST_PROXY=0
 ```

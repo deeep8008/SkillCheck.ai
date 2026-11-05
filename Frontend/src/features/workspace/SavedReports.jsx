@@ -41,7 +41,7 @@ export function History() {
   const state = useSavedData(listReports, page);
   return <>
     <p className="mb-4 font-mono text-xs uppercase tracking-widest text-red-400">Your progress / archive</p>
-    <h1 className="font-['Orbitron',sans-serif] text-3xl font-bold sm:text-4xl">Your saved analyses<span className="text-red-500">.</span></h1>
+    <h1 className="font-display text-3xl font-bold sm:text-4xl">Your saved analyses<span className="text-red-500">.</span></h1>
     <p className="mt-4 text-sm leading-7 text-neutral-400">Reports are saved to your account after analysis. Open one to revisit the feedback without another AI request.</p>
     {!state.data ? <RequestState state={state} /> : <>
       {!state.data.reports.length ? <div className={`${panel} py-12 text-center`}><h2 className="text-xl font-medium">{state.data.page === 1 ? 'No saved reports yet.' : 'No reports on this page.'}</h2><p className="mt-3 text-sm text-neutral-400">{state.data.page === 1 ? 'Analyse a resume in the workspace to create your first saved report.' : 'Use Previous to return to earlier pages.'}</p><Link to="/" className={`${linkStyle} mt-5 inline-block`}>Go to workspace →</Link></div> : <div className="mt-8 space-y-4">{state.data.reports.map(item => <article key={item.id} className={panel}>

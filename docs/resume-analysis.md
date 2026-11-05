@@ -8,7 +8,7 @@ Add these lines to `Backend/.env`, preserving your existing database and JWT set
 
 ```dotenv
 OPENROUTER_API_KEY=your_key_here
-OPENROUTER_MODEL=google/gemini-2.5-flash-lite
+OPENROUTER_MODEL=google/gemini-3.8-flash
 ```
 
 Put the real key only in `.env`, never in frontend code or chat. `.env` is already ignored by Git. `Backend/.env.example` lists the variable names without any secrets. The model is optional; the default is Gemini 2.5 Flash Lite. Other models must support JSON-schema structured output and the requested parameters.

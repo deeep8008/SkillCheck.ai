@@ -16,8 +16,9 @@ const findingSchema = {
 const reportSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["summary", "strengths", "gaps", "screeningConcerns", "limitations"],
+    required: ["headline", "summary", "strengths", "gaps", "screeningConcerns", "limitations"],
     properties: {
+        headline: { type: "string", minLength: 1, maxLength: 120 },
         summary: { type: "string", minLength: 1, maxLength: 1200 },
         strengths: { type: "array", maxItems: 3, items: findingSchema },
         gaps: { type: "array", maxItems: 3, items: findingSchema },
@@ -48,6 +49,7 @@ function matchesSchema(value, schema) {
 
 function validateReport(report, resumeText, jobDescription = "") {
     if (!matchesSchema(report, reportSchema)) return false;
+    if (/[\r\n\u2028\u2029]/.test(report.headline)) return false;
     const normalize = text => text.replace(/\s+/g, " ").trim();
     const source = normalize(resumeText);
     const requirements = normalize(jobDescription);

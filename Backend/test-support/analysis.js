@@ -4,6 +4,7 @@ const input = {
     jobDescription: "Build REST APIs and write automated tests."
 };
 const report = {
+    headline: "The API is cooking. The test suite left the group chat.",
     summary: "The resume demonstrates API development. Testing experience needs clearer evidence.",
     strengths: [{
         title: "Backend API development",
