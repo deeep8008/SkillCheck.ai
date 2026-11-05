@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { register } from "../services/auth.api";
 import { Link, useNavigate } from "react-router";
+import GoogleAuthButton from "../components/GoogleAuthButton";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -151,6 +152,12 @@ const Register = () => {
           {/* Hover Sweep Effect */}
           <span aria-hidden="true" className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
         </button>
+
+        {/* Continue with Google */}
+        <GoogleAuthButton
+          onSuccess={() => navigate("/", { replace: true })}
+          onError={setError}
+        />
 
         {/* Footer Link */}
         <p className="mt-8 border-t border-neutral-800/80 pt-6 text-center text-xs tracking-wide text-neutral-400">

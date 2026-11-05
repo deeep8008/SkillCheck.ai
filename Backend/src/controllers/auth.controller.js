@@ -146,4 +146,93 @@ const getUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser, logoutUser, getUser };
+const googleAuth = async (req, res) => {
+    try {
+        const { credential } = req.body || {};
+        if (typeof credential !== "string" || !credential.trim()) {
+            return res.status(400).json({ message: "Google credential is required" });
+        }
+
+        const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential.trim())}`;
+        let response;
+        try {
+            response = await fetch(verifyUrl, { signal: AbortSignal.timeout(10000) });
+        } catch {
+            return res.status(503).json({ message: "Could not reach Google verification servers. Please try again." });
+        }
+
+        if (!response.ok) {
+            return res.status(401).json({ message: "Invalid or expired Google credential" });
+        }
+
+        const payload = await response.json();
+
+        const expectedClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+        if (expectedClientId && payload.aud !== expectedClientId) {
+            return res.status(401).json({ message: "Google token was not issued for this application" });
+        }
+
+        if (payload.email_verified !== "true" && payload.email_verified !== true) {
+            return res.status(400).json({ message: "Google email is not verified" });
+        }
+
+        const email = String(payload.email || "").toLowerCase().trim();
+        const googleId = String(payload.sub || "").trim();
+
+        if (!email || !googleId) {
+            return res.status(400).json({ message: "Incomplete Google profile data" });
+        }
+
+        let user = await userModel.findOne({
+            $or: [{ googleId }, { email }]
+        });
+
+        if (user) {
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
+        } else {
+            // Generate a valid username from Google name or email prefix
+            const rawName = (payload.name || email.split("@")[0] || "user")
+                .toLowerCase()
+                .replace(/[^a-zA-Z0-9_.-]/g, "")
+                .slice(0, 30);
+            const base = rawName.length >= 3 ? rawName : `user_${randomUUID().slice(0, 6)}`;
+
+            let username = base;
+            let counter = 0;
+            while (await userModel.exists({ username })) {
+                username = `${base.slice(0, 25)}_${randomUUID().slice(0, 4)}`;
+                if (++counter > 10) break;
+            }
+
+            user = await userModel.create({
+                username,
+                email,
+                googleId
+            });
+        }
+
+        const token = jwt.sign(
+            { id: user._id, username: user.username },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d", jwtid: randomUUID() }
+        );
+        res.cookie("token", token, { ...authCookieOptions(), maxAge: 86400000 });
+
+        return res.status(200).json({
+            message: "Signed in with Google successfully",
+            user: {
+                username: user.username,
+                email: user.email
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+};
+
+module.exports = { registerUser, loginUser, logoutUser, getUser, googleAuth };

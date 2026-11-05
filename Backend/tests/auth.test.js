@@ -37,6 +37,9 @@ test("rejects invalid registration and login inputs before querying the database
     for (const body of [null, {}, { identifier: { $ne: null }, password: "password123" }]) {
         assert.equal((await post("/auth/login", body)).status, 400);
     }
+    for (const body of [null, {}, { credential: "" }, { credential: 123 }]) {
+        assert.equal((await post("/auth/google", body)).status, 400);
+    }
 });
 
 test("malformed JSON returns a readable error and signed-out sessions return 401", async () => {
