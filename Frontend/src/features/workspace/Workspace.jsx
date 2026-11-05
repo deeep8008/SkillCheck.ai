@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate, useOutletContext } from "react-router";
 import { extractResume, analyseResume } from "./services/resume.api";
 import AnalysisReport from "./AnalysisReport";
@@ -9,6 +9,21 @@ const panel = "border border-neutral-800 bg-neutral-900/60";
 const heading = "font-display";
 const field = "mt-3 w-full border border-neutral-700 bg-neutral-950 p-3 text-sm text-white outline-none focus:border-red-500";
 const primary = "inline-flex items-center justify-center gap-3 bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400";
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) return (
+      <div role="alert" className="rounded-2xl border border-red-500/40 bg-red-950/20 p-8 text-center">
+        <p className="text-sm font-semibold text-red-400">Something went wrong rendering this page.</p>
+        <p className="mt-2 text-xs text-neutral-400">{this.state.error?.message || 'Unknown error'}</p>
+        <button type="button" onClick={() => this.setState({ error: null })} className="mt-4 border border-neutral-700 px-4 py-2 text-xs hover:border-red-500">Try again</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 export function Workspace() {
   const [user, setUser] = useState(null);
@@ -55,7 +70,7 @@ export function Workspace() {
         {checkingSession ? <span role="status" className="text-xs text-neutral-400">Checking session…</span> : user ? <div className="flex items-center gap-4 text-xs"><span>Signed in as {user.username}</span><button type="button" disabled={signingOut} onClick={signOut} className="border border-neutral-700 px-4 py-2 hover:border-red-500 disabled:opacity-60">{signingOut ? 'Signing out…' : 'Sign out'}</button></div> : <Link to="/login" className="border border-neutral-700 px-4 py-2 text-xs hover:border-red-500">SIGN IN ↗</Link>}
       </div>
     </header>
-    <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10 lg:py-12">{sessionError && <p role="alert" className="mb-5 text-sm text-red-400">{sessionError}</p>}<Outlet context={{ onUnauthorized }} /></div>
+    <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10 lg:py-12">{sessionError && <p role="alert" className="mb-5 text-sm text-red-400">{sessionError}</p>}<ErrorBoundary><Outlet context={{ onUnauthorized }} /></ErrorBoundary></div>
     <footer className="mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 border-t border-neutral-800 px-6 py-6 text-xs text-neutral-500 lg:px-10"><span>SKILLCHECK.ai / Built for developers.</span></footer>
   </div>;
 }

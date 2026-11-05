@@ -79,8 +79,13 @@ async function analyseResume({ resumeText, targetRole, jobDescription }, config 
     let shortlist;
     if (jobDescription?.trim()) {
         shortlist = await shortlistEvidence(resumeText, jobDescription, requestProvider.bind(null, config));
-        if (!shortlist) throw analysisError(502, "Could not match resume evidence. Please try again later.", "AI_UNAVAILABLE");
-        input = { targetRole, ...shortlist };
+        if (shortlist) {
+            input = { targetRole, ...shortlist };
+        } else {
+            // Embedding call failed — fall back to raw text so the user still gets a result
+            console.warn("[analysis] shortlistEvidence returned null; falling back to raw resumeText");
+            input = { resumeText: resumeText.slice(0, 8000), targetRole, jobDescription };
+        }
     }
     const payload = await requestProvider(config, "chat/completions", {
         model: config.model,
