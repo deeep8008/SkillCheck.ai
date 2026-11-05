@@ -131,6 +131,7 @@ const Login = () => {
 
         {/* Continue with Google */}
         <GoogleAuthButton
+          mode="login"
           onSuccess={() => navigate("/", { replace: true })}
           onError={setError}
         />

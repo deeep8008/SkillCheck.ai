@@ -10,8 +10,8 @@ export async function login({ identifier, password }) {
   return response.data;
 }
 
-export async function googleAuth({ credential }) {
-  const response = await axios.post("/auth/google", { credential }, { timeout: 15000 });
+export async function googleAuth({ credential, accessToken, mode }) {
+  const response = await axios.post("/auth/google", { credential, accessToken, mode }, { timeout: 15000 });
   return response.data;
 }
 

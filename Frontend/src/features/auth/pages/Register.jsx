@@ -155,6 +155,7 @@ const Register = () => {
 
         {/* Continue with Google */}
         <GoogleAuthButton
+          mode="register"
           onSuccess={() => navigate("/", { replace: true })}
           onError={setError}
         />

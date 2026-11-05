@@ -148,36 +148,70 @@ const getUser = async (req, res) => {
 
 const googleAuth = async (req, res) => {
     try {
-        const { credential } = req.body || {};
-        if (typeof credential !== "string" || !credential.trim()) {
-            return res.status(400).json({ message: "Google credential is required" });
+        const { credential, accessToken, mode = "login" } = req.body || {};
+        if (
+            (typeof credential !== "string" || !credential.trim()) &&
+            (typeof accessToken !== "string" || !accessToken.trim())
+        ) {
+            return res.status(400).json({ message: "Google authorization token is required" });
         }
 
-        const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential.trim())}`;
-        let response;
-        try {
-            response = await fetch(verifyUrl, { signal: AbortSignal.timeout(10000) });
-        } catch {
-            return res.status(503).json({ message: "Could not reach Google verification servers. Please try again." });
+        let email = "";
+        let googleId = "";
+        let name = "";
+
+        if (accessToken?.trim()) {
+            // Verify via Google's userinfo endpoint using accessToken
+            let response;
+            try {
+                response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+                    headers: { Authorization: `Bearer ${accessToken.trim()}` },
+                    signal: AbortSignal.timeout(10000)
+                });
+            } catch {
+                return res.status(503).json({ message: "Could not reach Google verification servers. Please try again." });
+            }
+
+            if (!response.ok) {
+                return res.status(401).json({ message: "Invalid or expired Google authorization" });
+            }
+
+            const info = await response.json();
+            if (info.email_verified !== true && info.email_verified !== "true") {
+                return res.status(400).json({ message: "Google email is not verified" });
+            }
+            email = String(info.email || "").toLowerCase().trim();
+            googleId = String(info.sub || "").trim();
+            name = String(info.name || "").trim();
+        } else {
+            // Verify via Google's tokeninfo endpoint using ID token credential
+            const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential.trim())}`;
+            let response;
+            try {
+                response = await fetch(verifyUrl, { signal: AbortSignal.timeout(10000) });
+            } catch {
+                return res.status(503).json({ message: "Could not reach Google verification servers. Please try again." });
+            }
+
+            if (!response.ok) {
+                return res.status(401).json({ message: "Invalid or expired Google credential" });
+            }
+
+            const payload = await response.json();
+
+            const expectedClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+            if (expectedClientId && payload.aud !== expectedClientId) {
+                return res.status(401).json({ message: "Google token was not issued for this application" });
+            }
+
+            if (payload.email_verified !== "true" && payload.email_verified !== true) {
+                return res.status(400).json({ message: "Google email is not verified" });
+            }
+
+            email = String(payload.email || "").toLowerCase().trim();
+            googleId = String(payload.sub || "").trim();
+            name = String(payload.name || "").trim();
         }
-
-        if (!response.ok) {
-            return res.status(401).json({ message: "Invalid or expired Google credential" });
-        }
-
-        const payload = await response.json();
-
-        const expectedClientId = process.env.GOOGLE_CLIENT_ID?.trim();
-        if (expectedClientId && payload.aud !== expectedClientId) {
-            return res.status(401).json({ message: "Google token was not issued for this application" });
-        }
-
-        if (payload.email_verified !== "true" && payload.email_verified !== true) {
-            return res.status(400).json({ message: "Google email is not verified" });
-        }
-
-        const email = String(payload.email || "").toLowerCase().trim();
-        const googleId = String(payload.sub || "").trim();
 
         if (!email || !googleId) {
             return res.status(400).json({ message: "Incomplete Google profile data" });
@@ -187,14 +221,16 @@ const googleAuth = async (req, res) => {
             $or: [{ googleId }, { email }]
         });
 
-        if (user) {
-            if (!user.googleId) {
-                user.googleId = googleId;
-                await user.save();
+        // Mode-specific validation
+        if (mode === "register") {
+            if (user) {
+                return res.status(409).json({
+                    message: "An account with this email already exists. Please sign in instead."
+                });
             }
-        } else {
-            // Generate a valid username from Google name or email prefix
-            const rawName = (payload.name || email.split("@")[0] || "user")
+
+            // Create new user for registration
+            const rawName = (name || email.split("@")[0] || "user")
                 .toLowerCase()
                 .replace(/[^a-zA-Z0-9_.-]/g, "")
                 .slice(0, 30);
@@ -212,6 +248,19 @@ const googleAuth = async (req, res) => {
                 email,
                 googleId
             });
+        } else {
+            // mode === "login"
+            if (!user) {
+                return res.status(401).json({
+                    message: "No account found with this Google email. Please initialize an account first."
+                });
+            }
+
+            // If user existed by email (e.g. registered with password), attach googleId
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
         }
 
         const token = jwt.sign(
@@ -221,8 +270,8 @@ const googleAuth = async (req, res) => {
         );
         res.cookie("token", token, { ...authCookieOptions(), maxAge: 86400000 });
 
-        return res.status(200).json({
-            message: "Signed in with Google successfully",
+        return res.status(mode === "register" ? 201 : 200).json({
+            message: mode === "register" ? "User registered successfully" : "Signed in with Google successfully",
             user: {
                 username: user.username,
                 email: user.email
