@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router";
+import { Link } from "react-router";
 import { priorityEdits } from "./analysis.utils";
 
 const sourceLabels = {
@@ -55,6 +55,39 @@ function Finding({ finding }) {
   </article>;
 }
 
+function AtsCoverage({ ats }) {
+  const { matched, missing, coverage } = ats;
+  const color = coverage >= 70 ? 'text-emerald-400' : coverage >= 40 ? 'text-amber-400' : 'text-red-400';
+  const borderColor = coverage >= 70 ? 'border-emerald-500/40' : coverage >= 40 ? 'border-amber-500/40' : 'border-red-500/40';
+  return (
+    <section aria-label="ATS keyword coverage" className={`mt-4 rounded-2xl border ${borderColor} bg-neutral-900/60 p-5 sm:p-6`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold">ATS Keyword Coverage</h3>
+          <p className="mt-1 text-sm text-neutral-400">How many keywords from the job description appear in your resume.</p>
+        </div>
+        <span className={`text-3xl font-black tabular-nums ${color}`}>{coverage}<span className="text-lg font-semibold">%</span></span>
+      </div>
+      {matched.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-emerald-400">Matched · {matched.length}</p>
+          <div className="flex flex-wrap gap-2">
+            {matched.map(kw => <span key={kw} className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">{kw}</span>)}
+          </div>
+        </div>
+      )}
+      {missing.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-red-400">Missing · {missing.length}</p>
+          <div className="flex flex-wrap gap-2">
+            {missing.map(kw => <span key={kw} className="rounded border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-xs text-red-300">{kw}</span>)}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function AnalysisReport({ analysis, sample = false }) {
   const { report, model, targetRole } = analysis;
   const weaknesses = [...report.gaps, ...report.screeningConcerns];
@@ -96,6 +129,7 @@ export default function AnalysisReport({ analysis, sample = false }) {
         </ol>
       </Branch>
     </div>
+    {analysis.ats && <AtsCoverage ats={analysis.ats} />}
     {!sample && <div className="mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 text-sm text-neutral-400">
       {analysis.saved ? <Link to="/history" className="text-red-300 underline">Saved to History</Link> : <>
         <p role="alert" className="text-amber-300">{analysis.saveError || 'Saving was not confirmed. Keep this page open and check history before generating again.'}</p>

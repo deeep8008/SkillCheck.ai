@@ -1,4 +1,5 @@
 const { analyseResume, getAnalysisConfig } = require("../services/analysis.service");
+const { checkAtsCoverage } = require("../services/ats.service");
 const Report = require("../models/report.model");
 
 function requireAnalysisConfig(_req, res, next) {
@@ -13,7 +14,8 @@ function requireAnalysisConfig(_req, res, next) {
 async function analyse(req, res) {
     try {
         const result = await analyseResume(req.analysisInput);
-        const response = { message: "Resume analysed.", ...result, targetRole: req.analysisInput.targetRole };
+        const ats = checkAtsCoverage(req.analysisInput.resumeText, req.analysisInput.jobDescription);
+        const response = { message: "Resume analysed.", ...result, targetRole: req.analysisInput.targetRole, ...(ats && { ats }) };
         try {
             const saved = await Report.create({
                 owner: req.user.id,
