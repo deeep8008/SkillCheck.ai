@@ -10,9 +10,9 @@ export function DeltaModal({
 }) {
   const [v1Id, setV1Id] = useState(baseReport?.id || "");
   const [v2Id, setV2Id] = useState(targetReport?.id || "");
-  const [v1Data, setV1Data] = useState(baseReport || null);
-  const [v2Data, setV2Data] = useState(targetReport || null);
-  const [loading, setLoading] = useState(false);
+  const [v1Data, setV1Data] = useState(baseReport?.report ? baseReport : null);
+  const [v2Data, setV2Data] = useState(targetReport?.report ? targetReport : null);
+  const [loading, setLoading] = useState(!baseReport?.report || !targetReport?.report);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -30,22 +30,37 @@ export function DeltaModal({
     };
   }, [onClose]);
 
-  // Load report data if user changes dropdown
+  // Load report data if either report lacks full details or dropdown selection changes
   useEffect(() => {
     let active = true;
     async function loadData() {
       if (!v1Id || !v2Id) return;
-      if (v1Data?.id === v1Id && v2Data?.id === v2Id) return;
+
+      const needsV1 = !v1Data || v1Data.id !== v1Id || !v1Data.report;
+      const needsV2 = !v2Data || v2Data.id !== v2Id || !v2Data.report;
+
+      if (!needsV1 && !needsV2) {
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
       setError(null);
       try {
         const promises = [];
-        if (v1Data?.id !== v1Id) {
-          promises.push(getReport(v1Id).then(res => { if (active) setV1Data(res); }));
+        if (needsV1) {
+          promises.push(
+            getReport(v1Id).then((res) => {
+              if (active) setV1Data(res);
+            })
+          );
         }
-        if (v2Data?.id !== v2Id) {
-          promises.push(getReport(v2Id).then(res => { if (active) setV2Data(res); }));
+        if (needsV2) {
+          promises.push(
+            getReport(v2Id).then((res) => {
+              if (active) setV2Data(res);
+            })
+          );
         }
         await Promise.all(promises);
       } catch {
@@ -55,10 +70,13 @@ export function DeltaModal({
       }
     }
     loadData();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [v1Id, v2Id, v1Data, v2Data]);
 
-  const diff = computeReportDiff(v1Data, v2Data);
+  const diff = v1Data?.report && v2Data?.report ? computeReportDiff(v1Data, v2Data) : null;
+  const hasAtsChange = typeof diff?.ats?.change === "number";
 
   function handleSwap() {
     const tempId = v1Id;
@@ -69,7 +87,7 @@ export function DeltaModal({
     setV2Data(tempData);
   }
 
-  const isSameReport = v1Id && v2Id && v1Id === v2Id;
+  const isSameReport = Boolean(v1Id && v2Id && v1Id === v2Id);
 
   return (
     <div
@@ -119,7 +137,10 @@ export function DeltaModal({
               {availableReports.length > 0 ? (
                 <select
                   value={v1Id}
-                  onChange={(e) => setV1Id(e.target.value)}
+                  onChange={(e) => {
+                    setV1Id(e.target.value);
+                    setV1Data(null);
+                  }}
                   className="rounded-lg border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs text-neutral-200 focus:border-red-500 focus:outline-none cursor-pointer"
                 >
                   {availableReports.map((r) => (
@@ -147,7 +168,10 @@ export function DeltaModal({
               {availableReports.length > 0 ? (
                 <select
                   value={v2Id}
-                  onChange={(e) => setV2Id(e.target.value)}
+                  onChange={(e) => {
+                    setV2Id(e.target.value);
+                    setV2Data(null);
+                  }}
                   className="rounded-lg border border-neutral-700 bg-neutral-900 px-2.5 py-1 text-xs text-neutral-200 focus:border-red-500 focus:outline-none cursor-pointer"
                 >
                   {availableReports.map((r) => (
@@ -184,8 +208,11 @@ export function DeltaModal({
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
           {loading && (
-            <div className="py-16 text-center">
-              <p className="font-mono text-sm text-neutral-400 animate-pulse">Calculating version delta…</p>
+            <div className="py-20 text-center space-y-3">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
+              <p className="font-mono text-xs text-neutral-400 uppercase tracking-widest">
+                Loading report data for comparison…
+              </p>
             </div>
           )}
 
@@ -201,7 +228,7 @@ export function DeltaModal({
             </div>
           )}
 
-          {!loading && !error && diff && (
+          {!loading && !error && !isSameReport && diff && (
             <>
               {/* Scorecard Hero Cards */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -212,9 +239,9 @@ export function DeltaModal({
                   </span>
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-black text-white">
-                      {diff.ats ? `${diff.ats.v2Coverage}%` : "—"}
+                      {diff.ats?.v2Coverage != null ? `${diff.ats.v2Coverage}%` : "—"}
                     </span>
-                    {diff.ats?.change !== null && (
+                    {hasAtsChange && (
                       <span
                         className={`text-xs font-bold font-mono px-1.5 py-0.5 rounded ${
                           diff.ats.change > 0
@@ -229,7 +256,7 @@ export function DeltaModal({
                     )}
                   </div>
                   <p className="text-[11px] text-neutral-500">
-                    From {diff.ats?.v1Coverage ?? "—"}% in v1
+                    From {diff.ats?.v1Coverage != null ? `${diff.ats.v1Coverage}%` : "—"} in v1
                   </p>
                 </div>
 
@@ -298,10 +325,12 @@ export function DeltaModal({
                         ? `Great work! Your edits successfully closed ${
                             diff.closedRequirements.length + diff.resolvedGaps.length
                           } gap(s)${
-                            diff.ats?.change > 0 ? ` and boosted ATS keyword coverage by +${diff.ats.change}%` : ""
+                            hasAtsChange && diff.ats.change > 0 ? ` and boosted ATS keyword coverage by +${diff.ats.change}%` : ""
                           }. Your resume is significantly tighter and more aligned with the target role.`
-                        : diff.ats?.change > 0
-                        ? `Your resume improved ATS keyword coverage by +${diff.ats.change}%, adding ${diff.ats.newMatched.length} newly matched technical keyword(s).`
+                        : hasAtsChange && diff.ats.change > 0
+                        ? `Your resume improved ATS keyword coverage by +${diff.ats.change}%, adding ${
+                            diff.ats?.newMatched?.length || 0
+                          } newly matched technical keyword(s).`
                         : "No major gap differences detected between these two versions. Review the specific feedback suggestions in v2 to close remaining requirements."}
                     </p>
                   </div>
@@ -359,7 +388,7 @@ export function DeltaModal({
                         </div>
                       )}
 
-                      {diff.ats?.lostMatched?.length > 0 && (
+                      {Boolean(diff.ats?.lostMatched?.length) && (
                         <div className="mt-3 pt-3 border-t border-neutral-800">
                           <span className="font-semibold text-xs text-red-400 block mb-1">
                             ⚠️ Keywords Removed ({diff.ats.lostMatched.length}):
