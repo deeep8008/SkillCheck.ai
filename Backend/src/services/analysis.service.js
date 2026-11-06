@@ -94,11 +94,11 @@ async function analyseResume({ resumeText, targetRole, jobDescription }, config 
             { role: "user", content: JSON.stringify(input) }
         ],
         temperature: 0.2,
-        max_tokens: 3000,
+        max_tokens: 6000,
         stream: false,
         provider: { require_parameters: true, allow_fallbacks: false },
         response_format: { type: "json_schema", json_schema: { name: "resume_analysis", strict: true, schema: reportSchema } }
-    }, 45000);
+    }, 60000);
     const choice = payload?.choices?.[0];
     if (choice?.message?.refusal || choice?.finish_reason === "content_filter") {
         throw analysisError(422, "The AI could not assess this text. Check that it contains a readable resume and relevant role information before trying again.", "AI_REFUSED", false);

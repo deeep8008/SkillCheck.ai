@@ -79,7 +79,7 @@ test("sends shortlisted bullets in one structured Gemini request and saves the o
         const body = JSON.parse(options.body);
         assert.equal(options.headers.Authorization, "Bearer fake-test-key-never-sent");
         assert.equal(body.model, process.env.OPENROUTER_MODEL);
-        assert.equal(body.max_tokens, 3000);
+        assert.equal(body.max_tokens, 6000);
         assert.equal(body.response_format.type, "json_schema");
         assert.equal(body.response_format.json_schema.strict, true);
         assert.deepEqual(body.provider, { require_parameters: true, allow_fallbacks: false });
