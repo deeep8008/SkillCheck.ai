@@ -49,7 +49,7 @@ export default function GoogleAuthButton({ mode = "login", onSuccess, onError })
       });
 
       client.requestAccessToken();
-    } catch (err) {
+    } catch {
       onError?.("Failed to launch Google authentication. Please try again.");
     }
   }

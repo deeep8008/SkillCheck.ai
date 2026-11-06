@@ -1,4 +1,5 @@
 const Report = require("../models/report.model");
+const { checkAtsCoverage } = require("../services/ats.service");
 
 async function listReports(req, res) {
     const rawPage = req.query.page ?? "1";
@@ -31,10 +32,12 @@ async function getReport(req, res) {
         // Ownership belongs in the query, not in a check made after fetching by ID.
         const saved = await Report.findOne({ _id: req.params.id, owner: req.user.id }).lean();
         if (!saved) return res.status(404).json({ message: "Report not found." });
+        const ats = checkAtsCoverage(saved.resumeText, saved.jobDescription);
         res.json({
             id: String(saved._id), targetRole: saved.targetRole, model: saved.model,
             createdAt: saved.createdAt, report: saved.report,
-            resumeText: saved.resumeText, jobDescription: saved.jobDescription, saved: true
+            resumeText: saved.resumeText, jobDescription: saved.jobDescription, saved: true,
+            ...(ats && { ats })
         });
     } catch {
         res.status(503).json({ message: "Could not load this report. Please try again." });

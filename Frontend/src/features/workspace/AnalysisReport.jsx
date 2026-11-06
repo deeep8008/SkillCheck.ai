@@ -555,8 +555,16 @@ export default function AnalysisReport({ analysis, sample = false }) {
       />
     )}
 
-    {!sample && <div className="mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 text-sm text-neutral-400">
-      {analysis.saved ? <Link to="/history" className="text-red-300 underline">Saved to History</Link> : <>
+    {!sample && <div className="mt-5 flex flex-wrap items-center justify-between gap-4 text-sm text-neutral-400 border-t border-neutral-800/80 pt-4">
+      {analysis.saved ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Link to="/history" className="text-red-300 underline">Saved to History</Link>
+          <span className="text-neutral-600">·</span>
+          <Link to="/history" className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs font-mono text-neutral-300 hover:border-red-500 hover:text-white transition-all">
+            <span>🔁</span> Compare with previous version in History →
+          </Link>
+        </div>
+      ) : <>
         <p role="alert" className="text-amber-300">{analysis.saveError || 'Saving was not confirmed. Keep this page open and check history before generating again.'}</p>
         <button type="button" onClick={downloadReport} className="text-red-300 underline">Download report</button>
       </>}
