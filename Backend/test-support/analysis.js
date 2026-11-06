@@ -13,7 +13,8 @@ const report = {
         priority: "medium",
         requirementEvidence: "Build REST APIs",
         explanation: "This is relevant evidence for the requested API work.",
-        suggestion: "Describe one endpoint and your design decisions."
+        suggestion: "Describe one endpoint and your design decisions.",
+        exampleRewrite: "Engineered 12+ REST endpoints in Node.js/Express, reducing client latency by 35% through MongoDB indexing."
     }],
     gaps: [{
         title: "Testing is not evidenced",
@@ -22,7 +23,8 @@ const report = {
         priority: "high",
         requirementEvidence: "write automated tests",
         explanation: "The supplied job description asks for automated tests, but the resume does not describe them.",
-        suggestion: "If you have written tests, add a truthful example and the failure it catches."
+        suggestion: "If you have written tests, add a truthful example and the failure it catches.",
+        exampleRewrite: "Authored 45+ integration tests using Jest and Supertest, catching regression bugs before deployment."
     }],
     screeningConcerns: [],
     requirementMap: [{

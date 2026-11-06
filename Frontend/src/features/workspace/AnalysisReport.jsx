@@ -13,6 +13,34 @@ const requirementStatus = {
   no_evidence: 'No evidence found'
 };
 
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  async function handleCopy(e) {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback if clipboard API is restricted
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
+        copied
+          ? "border border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+          : "border border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-red-500 hover:text-white"
+      }`}
+      title="Copy Google X-Y-Z bullet to clipboard"
+    >
+      {copied ? "✓ Copied" : "📋 Copy"}
+    </button>
+  );
+}
+
 function RequirementMap({ rows }) {
   return <section aria-label="Job requirement map" className="space-y-3">
     <h4 className="text-lg font-semibold">Job requirement map</h4>
@@ -69,6 +97,20 @@ function Finding({ finding }) {
     <p className="text-sm leading-6 text-neutral-300">{finding.explanation}</p>
     {finding.evidence && <blockquote className="break-words border-l-2 border-red-500/50 pl-3 text-sm italic text-neutral-400">“{finding.evidence}”</blockquote>}
     {finding.requirementEvidence && <p className="break-words text-xs text-neutral-400">Job description · “{finding.requirementEvidence}”</p>}
+    {finding.exampleRewrite && (
+      <div className="mt-3 rounded-lg border border-red-500/30 bg-neutral-950/80 p-3">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-red-400 font-semibold flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+            Google X-Y-Z Rewrite
+          </span>
+          <CopyButton text={finding.exampleRewrite} />
+        </div>
+        <p className="font-mono text-xs text-neutral-200 select-all leading-relaxed">
+          "{finding.exampleRewrite}"
+        </p>
+      </div>
+    )}
   </article>;
 }
 
@@ -222,6 +264,20 @@ function ExpandedModal({ initialTab = "strengths", onClose, report, weaknesses, 
                           <strong className="text-neutral-300">Suggestion:</strong> {finding.suggestion}
                         </div>
                       )}
+                      {finding.exampleRewrite && (
+                        <div className="mt-3 rounded-lg border border-red-500/30 bg-neutral-950 p-3">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-red-400 font-semibold flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                              Google X-Y-Z Rewrite
+                            </span>
+                            <CopyButton text={finding.exampleRewrite} />
+                          </div>
+                          <p className="font-mono text-xs text-neutral-200 select-all leading-relaxed">
+                            "{finding.exampleRewrite}"
+                          </p>
+                        </div>
+                      )}
                     </article>
                   ))}
                 </div>
@@ -295,6 +351,20 @@ function ExpandedModal({ initialTab = "strengths", onClose, report, weaknesses, 
                             <strong className="text-neutral-300">Suggestion:</strong> {finding.suggestion}
                           </div>
                         )}
+                        {finding.exampleRewrite && (
+                          <div className="mt-3 rounded-lg border border-red-500/30 bg-neutral-950 p-3">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="font-mono text-[10px] uppercase tracking-wider text-red-400 font-semibold flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                Google X-Y-Z Rewrite
+                              </span>
+                              <CopyButton text={finding.exampleRewrite} />
+                            </div>
+                            <p className="font-mono text-xs text-neutral-200 select-all leading-relaxed">
+                              "{finding.exampleRewrite}"
+                            </p>
+                          </div>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -312,15 +382,29 @@ function ExpandedModal({ initialTab = "strengths", onClose, report, weaknesses, 
               {edits.length === 0 ? (
                 <p className="text-sm text-neutral-400">No specific edits were suggested.</p>
               ) : (
-                <ol className="space-y-3">
+                <ol className="space-y-4">
                   {edits.map((item, idx) => (
                     <li key={item.suggestion} className="flex items-start gap-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 sm:p-5 text-sm leading-6 text-neutral-200">
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10 font-mono text-xs font-bold text-red-400">
                         {idx + 1}
                       </span>
-                      <div className="flex-1">
+                      <div className="flex-1 space-y-2">
                         <p className="text-sm text-neutral-100">{item.suggestion}</p>
-                        {item.title && <p className="mt-1 text-xs text-neutral-500">Related to: {item.title}</p>}
+                        {item.title && <p className="text-xs text-neutral-500">Related to: {item.title}</p>}
+                        {item.exampleRewrite && (
+                          <div className="rounded-lg border border-red-500/30 bg-neutral-950 p-3 not-italic">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-mono text-[10px] uppercase tracking-wider text-red-400 font-semibold flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                Google X-Y-Z Rewrite
+                              </span>
+                              <CopyButton text={item.exampleRewrite} />
+                            </div>
+                            <p className="font-mono text-xs text-neutral-200 select-all">
+                              "{item.exampleRewrite}"
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </li>
                   ))}
@@ -429,7 +513,25 @@ export default function AnalysisReport({ analysis, sample = false }) {
         onExpand={() => setExpandedSection("improvements")}
       >
         <ol className="list-decimal space-y-4 pl-5 text-sm leading-6 text-neutral-300">
-          {edits.map(item => <li key={item.suggestion} className="break-words">{item.suggestion}</li>)}
+          {edits.map(item => (
+            <li key={item.suggestion} className="break-words space-y-2">
+              <p>{item.suggestion}</p>
+              {item.exampleRewrite && (
+                <div className="rounded-lg border border-red-500/30 bg-neutral-950/80 p-3 not-italic">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-red-400 font-semibold flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                      Google X-Y-Z Rewrite
+                    </span>
+                    <CopyButton text={item.exampleRewrite} />
+                  </div>
+                  <p className="font-mono text-xs text-neutral-200 select-all leading-relaxed">
+                    "{item.exampleRewrite}"
+                  </p>
+                </div>
+              )}
+            </li>
+          ))}
         </ol>
       </Branch>
     </div>

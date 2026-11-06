@@ -232,24 +232,25 @@ function AnalysisProgress({ stage }) {
 
 const sections = {
   Strengths: [
-    ['API development', '“Built REST APIs using Node.js, Express, and MongoDB.”', 'The sample resume explicitly demonstrates the core stack requested for this backend role.', 'Keep the stack visible and add one concrete example of an endpoint you designed.'],
-    ['Authentication foundations', '“Implemented JWT authentication and password hashing.”', 'This is relevant evidence of working with authenticated backend flows.', 'Explain how access to user-owned resources is enforced.']
+    ['API development', '“Built REST APIs using Node.js, Express, and MongoDB.”', 'The sample resume explicitly demonstrates the core stack requested for this backend role.', 'Keep the stack visible and add one concrete example of an endpoint you designed.', 'Architected 15+ REST endpoints in Node.js/Express, cutting database query latency by 40% via MongoDB compound indexing.'],
+    ['Authentication foundations', '“Implemented JWT authentication and password hashing.”', 'This is relevant evidence of working with authenticated backend flows.', 'Explain how access to user-owned resources is enforced.', 'Secured auth endpoints with stateless JWTs and bcrypt hashing (10 rounds), preventing unauthorized session hijacking across 5,000+ test requests.']
   ],
   Gaps: [
-    ['Production ownership', '“Deployed a personal API project.”', 'Deployment is mentioned, but monitoring, incident handling, and operating the service are not evidenced.', 'Describe how you detected failures and kept the service running.'],
-    ['Testing coverage', 'No testing example in the fictional resume.', 'The sample job description asks for automated testing. Absence of evidence is not proof of missing ability.', 'Add a real example of integration tests and the failure cases they cover.']
+    ['Production ownership', '“Deployed a personal API project.”', 'Deployment is mentioned, but monitoring, incident handling, and operating the service are not evidenced.', 'Describe how you detected failures and kept the service running.', 'Deployed containerized Node.js API to AWS ECS with Docker, establishing CloudWatch alerts to maintain 99.9% uptime during load spikes.'],
+    ['Testing coverage', 'No testing example in the fictional resume.', 'The sample job description asks for automated testing. Absence of evidence is not proof of missing ability.', 'Add a real example of integration tests and the failure cases they cover.', 'Engineered automated CI integration suite in Jest with 85% branch coverage, eliminating regression errors in release pipelines.']
   ],
   'Screening risks': [
-    ['Impact is difficult to assess', '“Improved API performance.”', 'Without measurements or a clear before/after, a reviewer may struggle to assess the contribution.', 'If you have measurements, include the workload, baseline, and improvement. Never invent numbers.'],
-    ['Role requirements are under-explained', 'No production testing or monitoring detail.', 'A reviewer looking for operational experience may need more information. This is a possible concern, not a prediction of rejection.', 'Use specific, truthful examples to make relevant work easier to evaluate.']
+    ['Impact is difficult to assess', '“Improved API performance.”', 'Without measurements or a clear before/after, a reviewer may struggle to assess the contribution.', 'If you have measurements, include the workload, baseline, and improvement. Never invent numbers.', 'Optimized MongoDB pagination queries across 200k records, slashing p95 response time from 420ms to 85ms.'],
+    ['Role requirements are under-explained', 'No production testing or monitoring detail.', 'A reviewer looking for operational experience may need more information. This is a possible concern, not a prediction of rejection.', 'Use specific, truthful examples to make relevant work easier to evaluate.', 'Constructed distributed tracing and structured logging with Winston, reducing Mean Time to Detection (MTTD) by 60%.']
   ],
 };
 
-const sampleFindings = entries => entries.map(([title, evidence, explanation, suggestion]) => ({
+const sampleFindings = entries => entries.map(([title, evidence, explanation, suggestion, exampleRewrite]) => ({
   title,
   evidence: evidence.startsWith('“') ? evidence.slice(1, -1) : null,
   explanation,
-  suggestion
+  suggestion,
+  exampleRewrite: exampleRewrite || null
 }));
 
 const sampleAnalysis = {

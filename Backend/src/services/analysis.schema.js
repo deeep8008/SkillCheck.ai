@@ -1,7 +1,7 @@
 const findingSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["title", "evidence", "explanation", "suggestion", "basis", "priority", "requirementEvidence"],
+    required: ["title", "evidence", "explanation", "suggestion", "basis", "priority", "requirementEvidence", "exampleRewrite"],
     properties: {
         title: { type: "string", minLength: 1, maxLength: 100 },
         evidence: { type: ["string", "null"], minLength: 1, maxLength: 500 },
@@ -9,7 +9,8 @@ const findingSchema = {
         priority: { type: "string", minLength: 1, maxLength: 10, enum: ["high", "medium", "low"] },
         requirementEvidence: { type: ["string", "null"], minLength: 1, maxLength: 500 },
         explanation: { type: "string", minLength: 1, maxLength: 700 },
-        suggestion: { type: "string", minLength: 1, maxLength: 600 }
+        suggestion: { type: "string", minLength: 1, maxLength: 600 },
+        exampleRewrite: { type: ["string", "null"], minLength: 1, maxLength: 400 }
     }
 };
 
@@ -50,7 +51,7 @@ function matchesSchema(value, schema) {
     if (value === null) return Array.isArray(schema.type) && schema.type.includes("null");
     if (schema.type === "boolean") return typeof value === "boolean";
     if (schema.type === "string" || Array.isArray(schema.type)) {
-        return typeof value === "string" && value.trim().length >= schema.minLength && value.length <= schema.maxLength;
+        return typeof value === "string" && value.trim().length >= (schema.minLength || 0) && value.length <= schema.maxLength;
     }
     if (schema.type === "array") {
         return Array.isArray(value) && value.length >= (schema.minItems || 0) && value.length <= schema.maxItems
@@ -58,9 +59,9 @@ function matchesSchema(value, schema) {
     }
     if (schema.type === "object") {
         return typeof value === "object" && !Array.isArray(value)
-            && schema.required.every(key => Object.hasOwn(value, key))
+            && schema.required.every(key => key === "exampleRewrite" || Object.hasOwn(value, key))
             && Object.keys(value).every(key => Object.hasOwn(schema.properties, key))
-            && Object.entries(schema.properties).every(([key, child]) => matchesSchema(value[key], child));
+            && Object.entries(schema.properties).every(([key, child]) => (key === "exampleRewrite" && value[key] === undefined) || matchesSchema(value[key], child));
     }
     return false;
 }
